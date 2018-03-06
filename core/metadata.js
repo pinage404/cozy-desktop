@@ -51,7 +51,8 @@ export type Metadata = {
   sides: MetadataSidesInfo,
   trashed?: true,
   incompatibilities?: *,
-  ino?: ?number
+  ino?: ?number,
+  moveFrom?: Metadata
 }
 
 export const isFile = (doc: Metadata): bool => {
