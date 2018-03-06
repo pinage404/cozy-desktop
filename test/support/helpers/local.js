@@ -20,7 +20,7 @@ export function posixifyPath (localPath: string): string {
   return localPath.split(path.sep).join(path.posix.sep)
 }
 
-async function tree (rootPath: string): Promise<string[]> {
+async function treeWithIno (rootPath: string): Promise<Array<{path: string, ino: number}>> {
   const dirsToRead = [rootPath]
   const relPaths = []
   const makeRelative = (absPath: string) => posixifyPath(absPath.slice(rootPath.length + path.sep.length))
@@ -41,11 +41,11 @@ async function tree (rootPath: string): Promise<string[]> {
         relPath = relPath + path.posix.sep
       }
 
-      relPaths.push(relPath)
+      relPaths.push({path: relPath, ino: stat.ino})
     }
   }
 
-  return relPaths.sort((a, b) => a.localeCompare(b))
+  return relPaths.sort((a, b) => a.path.localeCompare(b.path))
 }
 
 export class LocalTestHelpers {
@@ -87,10 +87,10 @@ export class LocalTestHelpers {
     this.local._trash = this.trashFunc
   }
 
-  async tree (): Promise<string[]> {
+  async treeWithIno (): Promise<{ref: number, path: string}> {
     let trashContents
     try {
-      trashContents = await tree(this.trashPath)
+      trashContents = await treeWithIno(this.trashPath)
     } catch (err) {
       if (err.code !== 'ENOENT') throw err
       throw new Error(
@@ -99,12 +99,22 @@ export class LocalTestHelpers {
       )
     }
     return trashContents
-      .map(relPath => path.posix.join('/Trash', relPath))
-      .concat(await tree(this.syncPath))
+      .map(item => ({...item, path: path.posix.join('/Trash', item.path)}))
+      .concat(await treeWithIno(this.syncPath))
       .map(conflictHelpers.ellipsizeDate)
   }
 
-  async treeWithoutTrash () {
+  async treeWithInoWithoutTrash (): Promise<{ref: number, path: string}> {
+    return (await this.treeWithIno())
+      .filter(p => !p.path.startsWith('/Trash/'))
+  }
+
+  async tree (): Promise<Array<string>> {
+    return (await this.treeWithIno())
+      .map(({path}) => path)
+  }
+
+  async treeWithoutTrash (): Promise<Array<string>> {
     return (await this.tree())
       .filter(p => !p.startsWith('/Trash/'))
   }

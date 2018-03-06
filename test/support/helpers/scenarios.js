@@ -88,8 +88,13 @@ module.exports.loadRemoteChangesFiles = (scenario) => {
 
 module.exports.init = async (scenario, pouch, abspath, relpathFix, trueino) => {
   debug('[init]')
+  const refToInoMap = {}
+  const refToRemoteID = {}
+  const refToPouchID = {}
+
   const remoteDocsToTrash = []
-  for (let {path: relpath, ino, trashed} of scenario.init) {
+  for (let {path: relpath, ref, trashed} of scenario.init) {
+    let ino = ref
     debug(relpath)
     const isOutside = relpath.startsWith('../outside')
     let remoteParent
@@ -102,15 +107,18 @@ module.exports.init = async (scenario, pouch, abspath, relpathFix, trueino) => {
     const remotePath = path.posix.join(_.get(remoteParent, 'attributes.path', ''), remoteName)
     const localPath = relpathFix(_.trimEnd(relpath, '/'))
     const lastModifiedDate = new Date('2011-04-11T10:20:30Z')
+    const id = metadata.id(localPath)
     if (relpath.endsWith('/')) {
       if (!trashed) {
         debug(`- create local dir: ${localPath}`)
         await fs.ensureDir(abspath(localPath))
-        if (trueino) ino = (await fs.stat(abspath(localPath))).ino
+        const stats = await fs.stat(abspath(localPath))
+        if (trueino) ino = stats.ino
+        else refToInoMap[ref] = stats.ino
       }
 
       const doc = {
-        _id: metadata.id(localPath),
+        _id: id,
         docType: 'folder',
         updated_at: lastModifiedDate,
         path: localPath,
@@ -130,21 +138,26 @@ module.exports.init = async (scenario, pouch, abspath, relpathFix, trueino) => {
         if (trashed) remoteDocsToTrash.push(remoteDir)
         else {
           debug(`- create dir metadata: ${doc._id}`)
+          refToRemoteID[ref] = remoteDir._id
+          refToPouchID[ref] = doc._id
           await pouch.put(doc)
         }
       }
     } else {
       const content = 'foo'
       const md5sum = 'rL0Y20zC+Fzt72VPzMSk2A=='
+      const id = metadata.id(localPath)
 
       if (!trashed) {
         debug(`- create local file: ${localPath}`)
         await fs.outputFile(abspath(localPath), content)
-        if (trueino) ino = (await fs.stat(abspath(localPath))).ino
+        const stats = await fs.stat(abspath(localPath))
+        if (trueino) ino = stats.ino
+        else refToInoMap[ref] = stats.ino
       }
 
       const doc = {
-        _id: metadata.id(localPath),
+        _id: id,
         md5sum,
         class: 'text',
         docType: 'file',
@@ -170,6 +183,8 @@ module.exports.init = async (scenario, pouch, abspath, relpathFix, trueino) => {
         if (trashed) remoteDocsToTrash.push(remoteFile)
         else {
           debug(`- create file metadata: ${doc._id}`)
+          refToRemoteID[ref] = remoteFile._id
+          refToPouchID[ref] = doc._id
           await pouch.put(doc)
         }
       }
@@ -178,6 +193,8 @@ module.exports.init = async (scenario, pouch, abspath, relpathFix, trueino) => {
   for (let remoteDoc of remoteDocsToTrash) {
     await cozy.files.trashById(remoteDoc._id)
   }
+
+  return {refToInoMap, refToPouchID, refToRemoteID}
 }
 
 module.exports.runActions = (scenario, abspath) => {

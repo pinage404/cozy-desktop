@@ -51,9 +51,9 @@ export class RemoteTestHelpers {
 
   // TODO: Extract reusable #scan() method from tree*()
 
-  async tree () {
+  async treeWithId () {
     const pathsToScan = ['/', `/${TRASH_DIR_NAME}`]
-    const relPaths = [`${TRASH_DIR_NAME}/`]
+    const relPaths: Array<{path: string, id?: ?string}> = [{path: `${TRASH_DIR_NAME}/`}]
 
     while (true) {
       const dirPath = pathsToScan.shift()
@@ -65,9 +65,9 @@ export class RemoteTestHelpers {
       } catch (err) {
         if (err.status !== 404) throw err
         // $FlowFixMe
-        dir = {relations: () => [{attributes: {name: '<BROKEN>', type: '<BROKEN>'}}]}
+        dir = {relations: () => [{_id: null, attributes: {name: '<BROKEN>', type: '<BROKEN>'}}]}
       }
-      for (const content of dir.relations('contents')) {
+      for (const content: * of dir.relations('contents')) {
         const {name, type} = content.attributes
         const remotePath = path.posix.join(dirPath, name)
         let relPath = remotePath.slice(1)
@@ -77,7 +77,7 @@ export class RemoteTestHelpers {
           pathsToScan.push(remotePath)
         }
 
-        relPaths.push(relPath)
+        relPaths.push({path: relPath, id: content._id})
       }
     }
 
@@ -86,17 +86,30 @@ export class RemoteTestHelpers {
       .map(conflictHelpers.ellipsizeDate)
   }
 
+  async treeWithoutTrashWithId () {
+    return (await this.treeWithId())
+      .filter(item => !item.path.startsWith(`${TRASH_DIR_NAME}/`))
+  }
+
   async treeWithoutTrash () {
-    return (await this.tree())
-      .filter(p => !p.startsWith(`${TRASH_DIR_NAME}/`))
+    return (await this.treeWithoutTrashWithId())
+      .map(({path}) => path)
+  }
+
+  async trashWithId () {
+    const TRASH_REGEXP = new RegExp(`^${TRASH_DIR_NAME}/(.+)$`)
+    return _.chain(await this.treeWithId())
+      .map(obj => {
+        const relPath = _.nth(obj.path.match(TRASH_REGEXP), 1)
+        return relPath ? {...obj, path: relPath} : null
+      })
+      .compact()
+      .value()
   }
 
   async trash () {
-    const TRASH_REGEXP = new RegExp(`^${TRASH_DIR_NAME}/(.+)$`)
-    return _.chain(await this.tree())
-      .map(p => _.nth(p.match(TRASH_REGEXP), 1))
-      .compact()
-      .value()
+    return (await this.trashWithId())
+      .map(({path}) => path)
   }
 
   async simulateChanges (docs: *) {

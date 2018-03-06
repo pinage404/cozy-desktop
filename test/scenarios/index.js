@@ -46,12 +46,12 @@ type PrepExpectation
 
 export type Scenario = {
   init?: Array<{
-    ino: number, path: string
+    ref: number, path: string
   }>,
   actions: Array<FSAction>,
   expected: {
     prepCalls?: Array<PrepExpectation>,
-    tree?: Array<string>,
+    tree?: Array<string|{path: string, ref?: number}>,
     remoteTrash?: Array<string>
   }
 }

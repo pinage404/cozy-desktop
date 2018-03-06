@@ -363,9 +363,17 @@ class Pouch {
   setRemoteSeqAsync: (seq: string) => Promise<*>
 
   tree (callback) {
-    this.db.allDocs((err, result) => {
+    this.db.allDocs({include_docs: true}, (err, result) => {
       if (err) return callback(err)
-      callback(null, result.rows.map(row => row.id).sort())
+      const tree = result.rows
+        .filter(row => !row.id.startsWith('_design/'))
+        .map(row => ({
+          path: row.id + (row.doc.docType === 'file' ? '' : '/'),
+          remoteID: row.doc.remote && row.doc.remote._id,
+          ino: row.doc.ino
+        }))
+        .sort()
+      callback(null, tree)
     })
   }
   treeAsync: () => Promise<Array<string>>

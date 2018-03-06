@@ -8,6 +8,8 @@ import path from 'path'
 import should from 'should'
 import sinon from 'sinon'
 
+import * as metadata from '../../core/metadata'
+
 import { scenarios, loadFSEventFiles, runActions, init } from '../support/helpers/scenarios'
 import configHelpers from '../support/helpers/config'
 import * as cozyHelpers from '../support/helpers/cozy'
@@ -121,14 +123,14 @@ describe('Test scenarios', function () {
             // TODO: expect prep actions
             if (expectedLocalTree) {
               expected.localTree = expectedLocalTree
-              actual.localTree = await helpers.local.tree()
+              actual.localTree = await helpers.local.treeWithIno()
             }
             if (expectedRemoteTree) {
               expected.remoteTree = expectedRemoteTree
-              actual.remoteTree = await helpers.remote.treeWithoutTrash()
+              actual.remoteTree = await helpers.remote.treeWithoutTrashWithId()
             }
             if (scenario.expected.remoteTrash) {
-              actual.remoteTrash = await helpers.remote.trash()
+              actual.remoteTrash = await helpers.remote.trashWithId()
             }
 
             should(actual).deepEqual(expected)
@@ -200,12 +202,16 @@ describe('Test scenarios', function () {
     }
 
     it(remoteTestName, async function () {
+      let refToInoMap = {}
+      let refToRemoteID = {}
       if (scenario.init) {
         let relpathFix = _.identity
         if (process.platform === 'win32') {
           relpathFix = (relpath) => relpath.replace(/\//g, '\\')
         }
-        await init(scenario, this.pouch, helpers.local.syncDir.abspath, relpathFix)
+        const initResult = await init(scenario, this.pouch, helpers.local.syncDir.abspath, relpathFix, true)
+        refToInoMap = initResult.refToInoMap
+        refToRemoteID = initResult.refToRemoteID
         await helpers.remote.ignorePreviousChanges()
       }
 
@@ -223,8 +229,51 @@ describe('Test scenarios', function () {
         if (scenario.expected.prepCalls) {
           should(prepCalls).deepEqual(scenario.expected.prepCalls)
         }
-        should(await helpers.local.treeWithoutTrash())
-          .deepEqual(scenario.expected.tree)
+
+        const inoToRefMap = _.invert(refToInoMap)
+        const remoteIDToRefMap = _.invert(refToRemoteID)
+
+        const actualLocalTree = await helpers.local.treeWithInoWithoutTrash()
+        actualLocalTree.forEach(item => {
+          if (inoToRefMap[item.ino] == null) {
+            item.ino = undefined
+          }
+        })
+        should(actualLocalTree)
+          .deepEqual(scenario.expected.tree.map(item => {
+            if (typeof item === 'string') return {path: item, ino: undefined}
+            else {
+              return {
+                path: item.path,
+                ino: refToInoMap[item.ref]
+              }
+            }
+          }))
+
+        const actualPouchTree = await helpers._pouch.treeAsync()
+        actualPouchTree.forEach(item => {
+          if (refToInoMap[item.ino] == null) item.ino = undefined
+          if (remoteIDToRefMap[item.remoteID] == null) {
+            item.remoteID = undefined
+          }
+        })
+
+        should(actualPouchTree)
+          .deepEqual(scenario.expected.tree.map(item => {
+            if (typeof item === 'string') {
+              return {
+                path: metadata.id(item),
+                ino: undefined,
+                remoteID: undefined
+              }
+            } else {
+              return {
+                path: metadata.id(item.path),
+                ino: refToInoMap[item.ref],
+                remoteID: refToRemoteID[item.ref]
+              }
+            }
+          }))
       }
 
       // TODO: Local trash assertions
