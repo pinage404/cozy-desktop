@@ -4,7 +4,7 @@ import type { Scenario } from '..'
 
 module.exports = ({
   init: [
-    { ino: 1, path: 'file' }
+    {ref: 1, path: 'file'}
   ],
   actions: [
     {type: '>>', path: 'file'}
@@ -14,7 +14,7 @@ module.exports = ({
       {method: 'updateFileAsync', path: 'file'}
     ],
     tree: [
-      'file'
+      {path: 'file', ref: 1}
     ],
     remoteTrash: []
   }

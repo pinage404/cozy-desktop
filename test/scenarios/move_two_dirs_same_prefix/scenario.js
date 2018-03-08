@@ -4,10 +4,10 @@ import type { Scenario } from '..'
 
 module.exports = ({
   init: [
-    {ino: 1, path: 'src/'},
-    {ino: 2, path: 'src/dir1/'},
-    {ino: 3, path: 'src/dir12/'},
-    {ino: 4, path: 'dst/'}
+    {ref: 1, path: 'src/'},
+    {ref: 2, path: 'src/dir1/'},
+    {ref: 3, path: 'src/dir12/'},
+    {ref: 4, path: 'dst/'}
   ],
   actions: [
     {type: 'mv', src: 'src/dir1', dst: 'dst/dir1'},
@@ -20,10 +20,10 @@ module.exports = ({
       {method: 'moveFolderAsync', src: 'src/dir12', dst: 'dst/dir12'}
     ],
     tree: [
-      'dst/',
-      'dst/dir1/',
-      'dst/dir12/',
-      'src/'
+      {path: 'dst/', ref: 4},
+      {path: 'dst/dir1/', ref: 2},
+      {path: 'dst/dir12/', ref: 3},
+      {path: 'src/', ref: 1}
     ],
     remoteTrash: []
   }

@@ -4,10 +4,10 @@ import type { Scenario } from '..'
 
 module.exports = ({
   init: [
-    {ino: 1, path: 'dst1/'},
-    {ino: 2, path: 'dst2/'},
-    {ino: 3, path: 'src/'},
-    {ino: 4, path: 'src/file'}
+    {ref: 1, path: 'dst1/'},
+    {ref: 2, path: 'dst2/'},
+    {ref: 3, path: 'src/'},
+    {ref: 4, path: 'src/file'}
   ],
   actions: [
     {type: 'mv', src: 'src/file', dst: 'dst1/file'},
@@ -19,10 +19,10 @@ module.exports = ({
       {method: 'moveFileAsync', dst: 'dst2/file', src: 'src/file'}
     ],
     tree: [
-      'dst1/',
-      'dst2/',
-      'dst2/file',
-      'src/'
+      {path: 'dst1/', ref: 1},
+      {path: 'dst2/', ref: 2},
+      {path: 'dst2/file', ref: 4},
+      {path: 'src/', ref: 3}
     ],
     remoteTrash: []
   }

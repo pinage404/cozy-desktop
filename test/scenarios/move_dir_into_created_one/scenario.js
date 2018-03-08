@@ -4,7 +4,7 @@ import type { Scenario } from '..'
 
 module.exports = ({
   init: [
-    {ino: 1, path: 'dir1/'}
+    {ref: 1, path: 'dir1/'}
   ],
   actions: [
     {type: 'mkdir', path: 'dir2'},
@@ -16,8 +16,8 @@ module.exports = ({
       {method: 'moveFolderAsync', src: 'dir1', dst: 'dir2/dir1'}
     ],
     tree: [
-      'dir2/',
-      'dir2/dir1/'
+      {path: 'dir2/'},
+      {path: 'dir2/dir1/', ref: 1}
     ],
     remoteTrash: []
   }

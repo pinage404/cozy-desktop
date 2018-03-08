@@ -4,12 +4,12 @@ import type { Scenario } from '..'
 
 module.exports = ({
   init: [
-    { ino: 1, path: 'parent/' },
-    { ino: 2, path: 'parent/dir/' },
-    { ino: 3, path: 'parent/dir/empty-subdir/' },
-    { ino: 4, path: 'parent/dir/subdir/' },
-    { ino: 5, path: 'parent/dir/subdir/file' },
-    { ino: 6, path: 'parent/other_dir/' }
+    {ref: 1, path: 'parent/'},
+    {ref: 2, path: 'parent/dir/'},
+    {ref: 3, path: 'parent/dir/empty-subdir/'},
+    {ref: 4, path: 'parent/dir/subdir/'},
+    {ref: 5, path: 'parent/dir/subdir/file'},
+    {ref: 6, path: 'parent/other_dir/'}
   ],
   actions: [
     {type: 'trash', path: 'parent/dir'}
@@ -22,8 +22,8 @@ module.exports = ({
       {method: 'trashFolderAsync', path: 'parent/dir'}
     ],
     tree: [
-      'parent/',
-      'parent/other_dir/'
+      {path: 'parent/', ref: 1},
+      {path: 'parent/other_dir/', ref: 6}
     ],
     remoteTrash: [
       'file'
